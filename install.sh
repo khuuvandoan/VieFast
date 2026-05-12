@@ -2,14 +2,29 @@
 
 # Thông tin thương hiệu
 BRAND="VieWarp"
-VERSION="v1.0.0 Alpha"
+VERSION="v1.0.1" # Cập nhật theo bản release mới nhất trên GitHub của bạn
 
 echo "------------------------------------------"
 echo "  Cài đặt $BRAND - Phiên bản $VERSION"
 echo "------------------------------------------"
 
-# 1. Tạo file Service trực tiếp (Không cần file XrayR.service riêng trên GitHub)
-echo "[*] Đang cấu hình hệ thống..."
+# 1. Cài đặt các công cụ cần thiết (nếu chưa có)
+echo "[*] Đang kiểm tra công cụ hỗ trợ..."
+apt update && apt install -y wget unzip
+
+# 2. Tạo thư mục hệ thống
+mkdir -p /usr/local/viewarp
+mkdir -p /etc/viewarp
+
+# 3. Tải và cài đặt file từ Release GitHub của bạn
+echo "[*] Đang tải bộ cài từ GitHub..."
+# Sử dụng link trực tiếp từ repo VieFast mà bạn đã tạo
+wget -O /usr/local/viewarp/viewarp.zip https://github.com/khuuvandoan/VieFast/releases/latest/download/XrayR-linux-64.zip
+unzip -o /usr/local/viewarp/viewarp.zip -d /usr/local/viewarp/
+chmod +x /usr/local/viewarp/xrayr
+
+# 4. Tạo file Service trực tiếp
+echo "[*] Đang cấu hình service hệ thống..."
 cat <<EOF > /etc/systemd/system/viewarp.service
 [Unit]
 Description=$BRAND Service
@@ -26,20 +41,18 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 
-# 2. Giả lập logic cài đặt (Bạn hãy thay thế bằng link file binary của bạn)
-mkdir -p /usr/local/viewarp
-mkdir -p /etc/viewarp
+systemctl daemon-reload
 
-# 3. Tích hợp Menu điều khiển (Gộp XrayR.sh vào đây)
+# 5. Tích hợp Menu điều khiển (Lệnh gọi nhanh: viewarp)
 cat <<EOF > /usr/bin/viewarp
 #!/bin/bash
 echo "--- Menu Quản Lý $BRAND ---"
-echo "1. Khởi động"
-echo "2. Dừng"
-echo "3. Xem Log"
-# Thêm các chức năng khác từ xraypro.sh của bạn vào đây
+echo "1. Start: systemctl start viewarp"
+echo "2. Stop:  systemctl stop viewarp"
+echo "3. Logs:  journalctl -u viewarp -f"
+# Bạn có thể copy nội dung từ file XrayR.sh cũ vào đây để hoàn thiện menu
 EOF
 
 chmod +x /usr/bin/viewarp
 
-echo "[+] Cài đặt hoàn tất! Gõ 'viewarp' để mở menu điều khiển."
+echo "[+] Cài đặt hoàn tất! Gõ 'viewarp' để quản lý."
