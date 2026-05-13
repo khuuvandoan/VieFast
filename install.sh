@@ -24,6 +24,7 @@ mkdir -p /etc/viewarp
 echo "[3/7] Download XrayR release..."
 cd /usr/local/viewarp || exit 1
 
+# Sử dụng link trực tiếp từ repo VieFast của bạn
 wget -O viewarp.zip "https://github.com/khuuvandoan/VieFast/releases/latest/download/XrayR-linux-64.zip"
 
 if [ ! -f viewarp.zip ]; then
@@ -35,23 +36,18 @@ fi
 echo "[4/7] Extracting..."
 unzip -o viewarp.zip
 
-# 5. Detect binary automatically
-echo "[5/7] Detect binary..."
+# 5. Cố định tên Binary để tránh lỗi tìm kiếm
+echo "[5/7] Configuring binary..."
 
-BIN=$(find /usr/local/viewarp -type f \( -name "XrayR*" -o -name "xrayr*" \) | head -n 1)
-
-if [ -z "$BIN" ]; then
-    echo "[ERROR] Binary not found after unzip!"
-    ls -lah /usr/local/viewarp
-    exit 1
+# Ép tên file binary về đúng chuẩn xrayr để dễ quản lý
+if [ -f "XrayR" ]; then
+    mv XrayR xrayr
 fi
 
-echo "[INFO] Found binary: $BIN"
+chmod +x xrayr
 
-chmod +x "$BIN"
-
-# Create global command
-ln -sf "$BIN" /usr/bin/xrayr
+# Tạo link hệ thống để gõ 'xrayr' ở bất cứ đâu
+ln -sf /usr/local/viewarp/xrayr /usr/bin/xrayr
 
 # 6. Create systemd service
 echo "[6/7] Create systemd service..."
@@ -76,14 +72,14 @@ EOF
 systemctl daemon-reload
 systemctl enable viewarp
 
-# 7. Create CLI menu
+# 7. Create CLI menu (Fix lỗi Menu rỗng)
 echo "[7/7] Create CLI tool..."
 
 cat <<'EOF' > /usr/bin/viewarp
 #!/bin/bash
-
+clear
 echo "=========================="
-echo "   VieWarp Manager"
+echo "    VieWarp Manager"
 echo "=========================="
 echo "1) Start"
 echo "2) Stop"
@@ -94,9 +90,9 @@ echo "=========================="
 read -p "Choose: " c
 
 case $c in
-1) systemctl start viewarp ;;
-2) systemctl stop viewarp ;;
-3) systemctl restart viewarp ;;
+1) systemctl start viewarp && echo "Started!" ;;
+2) systemctl stop viewarp && echo "Stopped!" ;;
+3) systemctl restart viewarp && echo "Restarted!" ;;
 4) systemctl status viewarp ;;
 5) journalctl -u viewarp -f ;;
 *) echo "Invalid option" ;;
@@ -105,10 +101,17 @@ EOF
 
 chmod +x /usr/bin/viewarp
 
+# Tạo file config mẫu nếu chưa có để tránh lỗi Service không khởi động được
+if [ ! -f /etc/viewarp/config.yml ]; then
+    echo "[INFO] Creating template config.yml..."
+    touch /etc/viewarp/config.yml
+fi
+
 echo ""
 echo "======================================"
 echo " INSTALL COMPLETED SUCCESSFULLY"
-echo " Run: viewarp"
-echo " Run: systemctl start viewarp"
-echo " Check: xrayr version"
+echo "--------------------------------------"
+echo " Chạy menu: viewarp"
+echo " Chạy lệnh gốc: xrayr"
+echo " Kiểm tra version: xrayr -v"
 echo "======================================"
