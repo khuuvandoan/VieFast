@@ -10,7 +10,7 @@ echo "  CÀI ĐẶT $BRAND - PHIÊN BẢN $VERSION"
 echo "===================================="
 
 # 1. Cài đặt các gói phụ thuộc
-apt update -y && apt install -y wget unzip curl
+apt update -y && apt install -y wget unzip curl iptables-persistent netfilter-persistent
 
 # 2. Tạo thư mục hệ thống
 mkdir -p $INSTALL_DIR
@@ -18,7 +18,7 @@ mkdir -p $CONFIG_DIR
 
 cd $INSTALL_DIR || exit 1
 
-# 3. Tải mã nguồn từ chính Release v1.0.3 của bạn
+# 3. Tải mã nguồn từ chính Release v1.0.4 của bạn
 echo "[3/6] Đang tải mã nguồn từ GitHub VieFast..."
 wget -O viewarp.zip "https://github.com/khuuvandoan/VieFast/releases/download/v1.0.4/XrayR-linux-64.zip"
 
@@ -62,6 +62,7 @@ ExecStart=$INSTALL_DIR/xrayr -c $CONFIG_DIR/config.yml
 Restart=always
 RestartSec=3
 StartLimitIntervalSec=0
+LimitNOFILE=1048576
 
 [Install]
 WantedBy=multi-user.target
@@ -71,7 +72,7 @@ systemctl daemon-reload
 systemctl enable viewarp
 systemctl restart viewarp
 
-# Tạo Menu quản lý
+# 7. Tạo Menu quản lý (Giao diện dọc chuyên nghiệp)
 cat <<'EOF' > /usr/bin/viewarp
 #!/bin/bash
 case $1 in
@@ -82,18 +83,45 @@ case $1 in
     log) journalctl -u viewarp -f ;;
     *)
         clear
-        echo "1. Start | 2. Stop | 3. Restart | 4. Log | 5. Version"
-        read -p "Chọn: " c
+        echo -e "====================================="
+        echo -e "          MENU QUẢN LÝ NODE          "
+        echo -e "====================================="
+        echo -e "  1. Start (Khởi động)"
+        echo -e "  2. Stop (Dừng chạy)"
+        echo -e "  3. Restart (Khởi động lại)"
+        echo -e "  4. Check log (Xem nhật ký)"
+        echo -e "  5. Delete (Xóa trắng Node)"
+        echo -e "  6. Version (Xem phiên bản)"
+        echo -e "  0. Thoát"
+        echo -e "====================================="
+        echo -e -n "Chọn chức năng (0-6): "
+        read c
         case $c in
-            1) systemctl start viewarp ;;
-            2) systemctl stop viewarp ;;
-            3) systemctl restart viewarp ;;
+            1) systemctl start viewarp; echo "Đã Start Node." ;;
+            2) systemctl stop viewarp; echo "Đã Stop Node." ;;
+            3) systemctl restart viewarp; echo "Đã Restart Node." ;;
             4) journalctl -u viewarp -f ;;
-            5) /usr/local/viewarp/xrayr version ;;
+            5) 
+                echo -n "Bạn có chắc chắn muốn xóa toàn bộ Node không? (y/n): "
+                read confirm
+                if [ "$confirm" == "y" ]; then
+                    systemctl stop viewarp
+                    systemctl disable viewarp
+                    rm -rf /usr/local/viewarp
+                    rm -f /etc/systemd/system/viewarp.service
+                    systemctl daemon-reload
+                    echo "Đã xóa hoàn toàn Node và Service."
+                else
+                    echo "Đã hủy thao tác xóa."
+                fi
+                ;;
+            6) /usr/local/viewarp/xrayr -version ;;
+            0) exit 0 ;;
+            *) echo "Lựa chọn không hợp lệ!" ;;
         esac
         ;;
 esac
 EOF
 chmod +x /usr/bin/viewarp
 
-echo "🎉 CÀI ĐẶT HOÀN TẤT! Dùng lệnh: viewarp"
+echo "🎉 CÀI ĐẶT CORE HOÀN TẤT! Dùng lệnh: viewarp"
