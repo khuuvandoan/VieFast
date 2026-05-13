@@ -1,7 +1,7 @@
 #!/bin/bash
 
 BRAND="VieWarp"
-VERSION="v1.0.3"
+VERSION="v1.0.3-Mtoly"
 INSTALL_DIR="/usr/local/viewarp"
 CONFIG_DIR="/etc/viewarp"
 
@@ -10,53 +10,45 @@ echo "  CÀI ĐẶT $BRAND - PHIÊN BẢN $VERSION"
 echo "===================================="
 
 # 1. Cài đặt các gói phụ thuộc
-echo "[1/6] Đang cài đặt các công cụ cần thiết..."
 apt update -y && apt install -y wget unzip curl
 
 # 2. Tạo thư mục hệ thống
-echo "[2/6] Đang tạo cấu trúc thư mục..."
 mkdir -p $INSTALL_DIR
 mkdir -p $CONFIG_DIR
 
 cd $INSTALL_DIR || exit 1
 
-# 3. Tải mã nguồn từ GitHub Release (Tự động lấy bản Latest v1.0.2 của bạn)
-echo "[3/6] Đang tải mã nguồn từ GitHub..."
-wget -O viewarp.zip "https://github.com/khuuvandoan/VieFast/releases/latest/download/XrayR-linux-64.zip"
+# 3. Tải mã nguồn từ chính Release v1.0.3 của bạn
+echo "[3/6] Đang tải mã nguồn từ GitHub VieFast..."
+wget -O viewarp.zip "https://github.com/khuuvandoan/VieFast/releases/download/v1.0.3/XrayR-linux-64.zip"
 
 if [ ! -f viewarp.zip ]; then
-    echo "[LỖI] Tải file thất bại. Vui lòng kiểm tra lại đường dẫn!"
+    echo "[LỖI] Không tìm thấy file zip. Vui lòng kiểm tra lại link Release!"
     exit 1
 fi
 
 # 4. Giải nén
-echo "[4/6] Đang giải nén dữ liệu..."
 unzip -o viewarp.zip
 
-# 5. Xử lý Binary (FIX LỖI TÊN + FIX LỖI MENU)
-echo "[5/6] Đang cấu hình lõi hệ thống..."
+# 5. Chuẩn hóa file thực thi (Fix lỗi 203/EXEC)
+# Tìm bất kỳ file nào có thuộc tính thực thi trong thư mục
+BIN_FOUND=$(find . -maxdepth 1 -type f -executable -not -name "*.sh" -not -name "*.zip" | head -n 1)
 
-BIN_TEMP=$(find $INSTALL_DIR -maxdepth 2 -type f \( -name "XrayR" -o -name "xrayr*" \) | head -n 1)
+if [ -z "$BIN_FOUND" ]; then
+    # Nếu không tìm thấy bằng quyền, tìm theo tên phổ biến
+    BIN_FOUND=$(find . -maxdepth 1 -type f \( -name "XrayR" -o -name "xrayr" \) | head -n 1)
+fi
 
-if [ -z "$BIN_TEMP" ]; then
-    echo "[LỖI] Không tìm thấy file thực thi sau khi giải nén!"
-    ls -lah $INSTALL_DIR
+if [ -n "$BIN_FOUND" ]; then
+    mv "$BIN_FOUND" "$INSTALL_DIR/xrayr"
+    chmod +x "$INSTALL_DIR/xrayr"
+    ln -sf "$INSTALL_DIR/xrayr" /usr/bin/xrayr
+else
+    echo "[LỖI] Không tìm thấy file chạy sau khi giải nén!"
     exit 1
 fi
 
-mv "$BIN_TEMP" $INSTALL_DIR/xrayr 2>/dev/null
-chmod +x $INSTALL_DIR/xrayr
-
-# Tạo lối tắt trực tiếp cho lệnh xrayr
-ln -sf $INSTALL_DIR/xrayr /usr/bin/xrayr
-
-if [ ! -f $CONFIG_DIR/config.yml ]; then
-    touch $CONFIG_DIR/config.yml
-fi
-
-# 6. Tạo Systemd Service (ĐÃ FIX -config THÀNH -c)
-echo "[6/6] Đang thiết lập Service chạy ngầm..."
-
+# 6. Thiết lập Service (Dùng cờ -c cho bản Mtoly)
 cat <<EOF > /etc/systemd/system/viewarp.service
 [Unit]
 Description=$BRAND Service
@@ -69,6 +61,7 @@ WorkingDirectory=$INSTALL_DIR
 ExecStart=$INSTALL_DIR/xrayr -c $CONFIG_DIR/config.yml
 Restart=always
 RestartSec=3
+StartLimitIntervalSec=0
 
 [Install]
 WantedBy=multi-user.target
@@ -76,55 +69,31 @@ EOF
 
 systemctl daemon-reload
 systemctl enable viewarp
+systemctl restart viewarp
 
-# TẠO MENU QUẢN LÝ (HỖ TRỢ CẢ GIAO DIỆN & LỆNH GÕ NHANH NHƯ XRAYR GỐC)
+# Tạo Menu quản lý
 cat <<'EOF' > /usr/bin/viewarp
 #!/bin/bash
-
-# Kiểm tra nếu người dùng truyền tham số (vd: viewarp start, viewarp log)
-if [ $# -gt 0 ]; then
-    case $1 in
-        start) systemctl start viewarp && echo "Đã khởi động VieWarp!" ;;
-        stop) systemctl stop viewarp && echo "Đã dừng VieWarp!" ;;
-        restart) systemctl restart viewarp && echo "Đã khởi động lại VieWarp!" ;;
-        status) systemctl status viewarp ;;
-        log) journalctl -u viewarp -f ;;
-        *) /usr/local/viewarp/xrayr "$@" ;; # Chuyển các lệnh khác (như -v) cho nhân XrayR xử lý
-    esac
-    exit 0
-fi
-
-# Nếu không truyền tham số thì hiện Menu giao diện
-clear
-echo "=========================="
-echo "    VieWarp Manager"
-echo "=========================="
-echo "1) Khởi động (start)"
-echo "2) Dừng (stop)"
-echo "3) Khởi động lại (restart)"
-echo "4) Trạng thái (status)"
-echo "5) Xem Logs (log)"
-echo "6) Xem phiên bản Core (-v)"
-echo "=========================="
-read -p "Chọn chức năng (1-6): " c
-
-case $c in
-1) systemctl start viewarp && echo "Đã khởi động!" ;;
-2) systemctl stop viewarp && echo "Đã dừng!" ;;
-3) systemctl restart viewarp && echo "Đã khởi động lại!" ;;
-4) systemctl status viewarp ;;
-5) journalctl -u viewarp -f ;;
-6) /usr/local/viewarp/xrayr -v ;;
-*) echo "Lựa chọn không hợp lệ" ;;
+case $1 in
+    start) systemctl start viewarp ;;
+    stop) systemctl stop viewarp ;;
+    restart) systemctl restart viewarp ;;
+    status) systemctl status viewarp ;;
+    log) journalctl -u viewarp -f ;;
+    *)
+        clear
+        echo "1. Start | 2. Stop | 3. Restart | 4. Log | 5. Version"
+        read -p "Chọn: " c
+        case $c in
+            1) systemctl start viewarp ;;
+            2) systemctl stop viewarp ;;
+            3) systemctl restart viewarp ;;
+            4) journalctl -u viewarp -f ;;
+            5) /usr/local/viewarp/xrayr version ;;
+        esac
+        ;;
 esac
 EOF
-
 chmod +x /usr/bin/viewarp
 
-echo ""
-echo "===================================="
-echo " 🎉 CÀI ĐẶT CORE VIEWARP HOÀN TẤT!"
-echo " - Mở Menu: viewarp"
-echo " - Xem log nhanh: viewarp log"
-echo " - Kiểm tra version: viewarp -v"
-echo "===================================="
+echo "🎉 CÀI ĐẶT HOÀN TẤT! Dùng lệnh: viewarp"
