@@ -1,7 +1,7 @@
 #!/bin/bash
 
 BRAND="viewarp"
-VERSION="v1.0.3"
+VERSION="v1.0.4"
 INSTALL_DIR="/usr/local/viewarp"
 CONFIG_DIR="/etc/viewarp"
 
@@ -20,7 +20,7 @@ cd $INSTALL_DIR || exit 1
 
 # 3. Tải mã nguồn từ chính Release v1.0.3 của bạn
 echo "[3/6] Đang tải mã nguồn từ GitHub VieFast..."
-wget -O viewarp.zip "https://github.com/khuuvandoan/VieFast/releases/download/v1.0.3/XrayR-linux-64.zip"
+wget -O viewarp.zip "https://github.com/khuuvandoan/VieFast/releases/download/v1.0.4/XrayR-linux-64.zip"
 
 if [ ! -f viewarp.zip ]; then
     echo "[LỖI] Không tìm thấy file zip. Vui lòng kiểm tra lại link Release!"
