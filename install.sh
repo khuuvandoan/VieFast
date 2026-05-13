@@ -1,12 +1,12 @@
 #!/bin/bash
 
 BRAND="VieWarp"
-VERSION="v1.0.1"
+VERSION="v1.0.2"
 INSTALL_DIR="/usr/local/viewarp"
 CONFIG_DIR="/etc/viewarp"
 
 echo "===================================="
-echo "  CÀI ĐẶT $BRAND - PHIÊN BẢN CHUẨN"
+echo "  CÀI ĐẶT $BRAND - PHIÊN BẢN $VERSION"
 echo "===================================="
 
 # 1. Cài đặt các gói phụ thuộc
@@ -20,8 +20,8 @@ mkdir -p $CONFIG_DIR
 
 cd $INSTALL_DIR || exit 1
 
-# 3. Tải mã nguồn từ GitHub Release
-echo "[3/6] Đang tải mã nguồn..."
+# 3. Tải mã nguồn từ GitHub Release (Tự động lấy bản Latest v1.0.2 của bạn)
+echo "[3/6] Đang tải mã nguồn từ GitHub..."
 wget -O viewarp.zip "https://github.com/khuuvandoan/VieFast/releases/latest/download/XrayR-linux-64.zip"
 
 if [ ! -f viewarp.zip ]; then
