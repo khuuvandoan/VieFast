@@ -1,7 +1,7 @@
 #!/bin/bash
 
 BRAND="VieWarp"
-VERSION="v1.0.3"
+VERSION="v1.0.3-Mtoly"
 INSTALL_DIR="/usr/local/viewarp"
 CONFIG_DIR="/etc/viewarp"
 
