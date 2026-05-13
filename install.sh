@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BRAND="VieWarp"
+BRAND="viewarp"
 VERSION="v1.0.3"
 INSTALL_DIR="/usr/local/viewarp"
 CONFIG_DIR="/etc/viewarp"
