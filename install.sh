@@ -1,56 +1,57 @@
 #!/bin/bash
 
-# =========================
-# VieWarp Auto Installer
-# =========================
-
 BRAND="VieWarp"
-VERSION="v1.0.1"
+INSTALL_DIR="/usr/local/viewarp"
+CONFIG_DIR="/etc/viewarp"
 
-echo "======================================"
-echo "  Install $BRAND - $VERSION"
-echo "======================================"
+echo "===================================="
+echo "  INSTALL $BRAND AUTO FIX VERSION"
+echo "===================================="
 
-# 1. Update system
-echo "[1/7] Update system..."
+# 1. Install dependencies
+echo "[1/6] Installing dependencies..."
 apt update -y && apt install -y wget unzip curl
 
-# 2. Create directories
-echo "[2/7] Create directories..."
-mkdir -p /usr/local/viewarp
-mkdir -p /etc/viewarp
+# 2. Create folders
+echo "[2/6] Creating folders..."
+mkdir -p $INSTALL_DIR
+mkdir -p $CONFIG_DIR
 
-# 3. Download release
-echo "[3/7] Download XrayR release..."
-cd /usr/local/viewarp || exit 1
+cd $INSTALL_DIR || exit 1
 
-# Sử dụng link trực tiếp từ repo VieFast của bạn
+# 3. Download XrayR
+echo "[3/6] Downloading XrayR..."
 wget -O viewarp.zip "https://github.com/khuuvandoan/VieFast/releases/latest/download/XrayR-linux-64.zip"
 
 if [ ! -f viewarp.zip ]; then
-    echo "[ERROR] Download failed!"
+    echo "[ERROR] Download failed"
     exit 1
 fi
 
-# 4. Unzip
-echo "[4/7] Extracting..."
+# 4. Extract
+echo "[4/6] Extracting..."
 unzip -o viewarp.zip
 
-# 5. Cố định tên Binary để tránh lỗi tìm kiếm
-echo "[5/7] Configuring binary..."
+# 5. FIX: detect REAL binary (IMPORTANT FIX)
+echo "[5/6] Detecting binary..."
 
-# Ép tên file binary về đúng chuẩn xrayr để dễ quản lý
-if [ -f "XrayR" ]; then
-    mv XrayR xrayr
+BIN=$(find $INSTALL_DIR -type f \( -name "XrayR" -o -name "XrayR*" \) | head -n 1)
+
+if [ -z "$BIN" ]; then
+    echo "[ERROR] No XrayR binary found!"
+    ls -lah $INSTALL_DIR
+    exit 1
 fi
 
-chmod +x xrayr
+echo "[OK] Found binary: $BIN"
 
-# Tạo link hệ thống để gõ 'xrayr' ở bất cứ đâu
-ln -sf /usr/local/viewarp/xrayr /usr/bin/xrayr
+chmod +x "$BIN"
 
-# 6. Create systemd service
-echo "[6/7] Create systemd service..."
+# IMPORTANT FIX: create system command
+ln -sf "$BIN" /usr/bin/xrayr
+
+# 6. systemd service FIXED
+echo "[6/6] Creating service..."
 
 cat <<EOF > /etc/systemd/system/viewarp.service
 [Unit]
@@ -60,8 +61,8 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/usr/local/viewarp/
-ExecStart=/usr/bin/xrayr -config /etc/viewarp/config.yml
+WorkingDirectory=$INSTALL_DIR
+ExecStart=$BIN -config $CONFIG_DIR/config.yml
 Restart=always
 RestartSec=3
 
@@ -72,46 +73,33 @@ EOF
 systemctl daemon-reload
 systemctl enable viewarp
 
-# 7. Create CLI menu (Fix lỗi Menu rỗng)
-echo "[7/7] Create CLI tool..."
-
+# CLI menu
 cat <<'EOF' > /usr/bin/viewarp
 #!/bin/bash
-clear
-echo "=========================="
-echo "    VieWarp Manager"
-echo "=========================="
+echo "==== VieWarp Manager ===="
 echo "1) Start"
 echo "2) Stop"
 echo "3) Restart"
 echo "4) Status"
 echo "5) Logs"
-echo "=========================="
 read -p "Choose: " c
 
 case $c in
-1) systemctl start viewarp && echo "Started!" ;;
-2) systemctl stop viewarp && echo "Stopped!" ;;
-3) systemctl restart viewarp && echo "Restarted!" ;;
+1) systemctl start viewarp ;;
+2) systemctl stop viewarp ;;
+3) systemctl restart viewarp ;;
 4) systemctl status viewarp ;;
 5) journalctl -u viewarp -f ;;
-*) echo "Invalid option" ;;
+*) echo "Invalid" ;;
 esac
 EOF
 
 chmod +x /usr/bin/viewarp
 
-# Tạo file config mẫu nếu chưa có để tránh lỗi Service không khởi động được
-if [ ! -f /etc/viewarp/config.yml ]; then
-    echo "[INFO] Creating template config.yml..."
-    touch /etc/viewarp/config.yml
-fi
-
 echo ""
-echo "======================================"
-echo " INSTALL COMPLETED SUCCESSFULLY"
-echo "--------------------------------------"
-echo " Chạy menu: viewarp"
-echo " Chạy lệnh gốc: xrayr"
-echo " Kiểm tra version: xrayr -v"
-echo "======================================"
+echo "===================================="
+echo " INSTALL DONE"
+echo " Run: systemctl start viewarp"
+echo " Run: xrayr"
+echo " Run: viewarp"
+echo "===================================="
